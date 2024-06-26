@@ -13,17 +13,71 @@ class ViewController: UIViewController {
         }
     }
     
+    @IBOutlet weak var startButton: UIButton!
+    
+    @IBOutlet weak var stopButton: UIButton!
+    
     @IBAction func onBut(_ sender: Any) {
         isBlack.toggle()
     }
+    
+    private var queue = DispatchQueue(label: "BrutForce", attributes: [.concurrent])
+    private var workItem: DispatchWorkItem?
+    private var brutForceIsActive = false;
+    
+    @IBAction func stop(_ sender: Any) {
+        if (self.brutForceIsActive) {
+            workItem?.cancel()
+        }
+    }
+    
+    @IBAction func start(_ sender: Any) {
+        if (self.brutForceIsActive) {
+            return
+        }
+        
+        let password = self.text.text ?? "1111"
+            
+        DispatchQueue.main.async {
+            self.indicator.startAnimating()
+        }
+        
+        workItem = DispatchWorkItem {
+            self.brutForceIsActive = true
+            self.bruteForce(passwordToUnlock: password)
+            self.brutForceIsActive = false
+            DispatchQueue.main.sync {
+                self.indicator.stopAnimating()
+                self.text.isSecureTextEntry = false
+            }
+        }
+        
+        queue.async(execute: workItem!)
+    }
+    
+    
+    @IBOutlet weak var label: UILabel!
+    
+    @IBOutlet weak var text: UITextField!
+    
+    @IBAction func inputText(_ sender: Any) {
+    }
+    
+    @IBOutlet weak var indicator: UIActivityIndicatorView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         
-       self.bruteForce(passwordToUnlock: "1!gr")
         
         // Do any additional setup after loading the view.
+    }
+    
+    func showBrutforceWork(_ password: String) {
+        
+        DispatchQueue.main.async {
+            self.label.text = password
+        }
     }
     
     func bruteForce(passwordToUnlock: String) {
@@ -33,9 +87,14 @@ class ViewController: UIViewController {
 
         // Will strangely ends at 0000 instead of ~~~
         while password != passwordToUnlock { // Increase MAXIMUM_PASSWORD_SIZE value for more
+            if workItem?.isCancelled == true {
+                showBrutforceWork("Password wasn't hacked =(")
+                return
+            }
             password = generateBruteForce(password, fromArray: ALLOWED_CHARACTERS)
 //             Your stuff here
             print(password)
+            showBrutforceWork(password)
             // Your stuff here
         }
         
